@@ -224,27 +224,27 @@ pub fn buy_beverage(
     let balance = BALANCES.load(deps.storage, &info.sender)?;
 
     if beverage.price > balance {
-        return Err(ContractError::NotEnoughTokens {});
+        return Err(ContractError::NotEnoughTokens {needed: String::from(beverage.price), given: String::from(balance)});
     }
 
     BALANCES.update(
         deps.storage,
         &info.sender,
         |balance: Option<Uint128>| -> StdResult<_> {
-            Ok(balance.unwrap_or_default().checked_sub(beverage.price)?)
+            Ok(balance.unwrap_or_default() - beverage.price)
         },
     )?;
 
     VENDING_MACHINE.update(deps.storage, &name, |beverage| -> StdResult<_> {
-        let beverage = beverage.unwrap_or_default();
+        let mut beverage = beverage.unwrap_or_default();
 
-        beverage.amount.checked_sub(Uint128::new(1))?;
+        beverage.amount -= Uint128::new(1);
 
         Ok(beverage)
     })?;
 
-    TOKEN_INFO.update(deps.storage, |token| -> StdResult<_> {
-        token.total_supply.checked_add(beverage.amount)?;
+    TOKEN_INFO.update(deps.storage, |mut token| -> StdResult<_> {
+        token.total_supply += beverage.amount;
         Ok(token)
     })?;
 
@@ -267,8 +267,8 @@ pub fn withdraw(
         return Err(ContractError::Unauthorized {});
     }
 
-    TOKEN_INFO.update(deps.storage, |token| -> StdResult<_> {
-        token.total_supply.checked_sub(count_amount)?;
+    TOKEN_INFO.update(deps.storage, |mut token| -> StdResult<_> {
+        token.total_supply -= count_amount;
         Ok(token)
     })?;
 
@@ -284,15 +284,14 @@ pub fn give_tokens(
     _env: Env,
     info: MessageInfo,
     address: String,
-    add_tokens: Uint128,
+    tokens: Uint128,
 ) -> Result<Response, ContractError> {
     let mut config = TOKEN_INFO.load(deps.storage)?;
     if config.mint.is_none() || config.mint.as_ref().unwrap().minter != info.sender {
         return Err(ContractError::Unauthorized {});
     }
 
-    // update supply and enforce cap
-    config.total_supply += add_tokens;
+    config.total_supply += tokens;
     if let Some(limit) = config.get_cap() {
         if config.total_supply > limit {
             return Err(ContractError::CannotExceedCap {});
@@ -303,9 +302,7 @@ pub fn give_tokens(
     let address = deps.api.addr_validate(&address)?;
 
     let balance = BALANCES.update(deps.storage, &address, |balance| -> StdResult<_> {
-        let balance = balance.unwrap_or_default();
-        balance.checked_add(add_tokens)?;
-        Ok(balance)
+        Ok(balance.unwrap_or_default() + tokens.clone())
     })?;
 
     let res = Response::new()

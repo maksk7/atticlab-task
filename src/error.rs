@@ -30,6 +30,6 @@ pub enum ContractError {
     #[error("The beverage is over")]
     BevaregeIsOver {},
 
-    #[error("Not enough COFFEETOKES")]
-    NotEnoughTokens {},
+    #[error("Not enough COFFEETOKENS(needed {needed}, given {given})")]
+    NotEnoughTokens {needed: String, given: String},
 }
