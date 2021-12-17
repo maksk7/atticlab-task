@@ -224,7 +224,10 @@ pub fn buy_beverage(
     let balance = BALANCES.load(deps.storage, &info.sender)?;
 
     if beverage.price > balance {
-        return Err(ContractError::NotEnoughTokens {needed: String::from(beverage.price), given: String::from(balance)});
+        return Err(ContractError::NotEnoughTokens {
+            needed: String::from(beverage.price),
+            given: String::from(balance),
+        });
     }
 
     BALANCES.update(

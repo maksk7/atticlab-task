@@ -1,1 +1,0 @@
-b5632b0ae97ed15f68552d4c5c60a645ed5248c1a7b956b4554ce06877bee4da  terra_test.wasm

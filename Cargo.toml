@@ -1,5 +1,5 @@
 [package]
-name = "terra-test"
+name = "atticlab_task"
 version = "0.1.0"
 authors = ["Maks Koval <maksk7742@gmail.com>"]
 edition = "2018"
@@ -42,7 +42,7 @@ schemars = "0.8.3"
 serde = { version = "1.0.127", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.26" }
 cw20-base = { version = "0.8.1", features = ["library"] }
-cw-multi-test = "0.8.1"
 
 [dev-dependencies]
 cosmwasm-schema = { version = "0.16.0" }
+cw-multi-test = "0.8.1"

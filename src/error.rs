@@ -31,5 +31,5 @@ pub enum ContractError {
     BevaregeIsOver {},
 
     #[error("Not enough COFFEETOKENS(needed {needed}, given {given})")]
-    NotEnoughTokens {needed: String, given: String},
+    NotEnoughTokens { needed: String, given: String },
 }
