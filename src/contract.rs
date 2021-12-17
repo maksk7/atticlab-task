@@ -1,8 +1,7 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Order,
-    Response, StdResult, Uint128,
+    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Order, Response, StdResult, Uint128,
 };
 
 use cw2::set_contract_version;
@@ -10,9 +9,7 @@ use cw20_base::state::{MinterData, TokenInfo, BALANCES, TOKEN_INFO};
 use cw_storage_plus::Bound;
 
 use crate::error::ContractError;
-use crate::msg::{
-    AllBeveragesResponse, AllBeveragesDetails, ExecuteMsg, InstantiateMsg, QueryMsg,
-};
+use crate::msg::{AllBeveragesDetails, AllBeveragesResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::{BeverageInfo, VENDING_MACHINE};
 
 // version info for migration info
@@ -26,8 +23,8 @@ const MAX_PAGE_SIZE: u32 = 30;
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
-    env: Env,
-    _info: MessageInfo,
+    _env: Env,
+    info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
@@ -38,8 +35,8 @@ pub fn instantiate(
         decimals: msg.decimals,
         total_supply: Uint128::new(0),
         mint: Some(MinterData {
-            minter: env.contract.address,
-            cap: None,
+            minter: info.sender,
+            cap: Option::from(Uint128::new(10000)),
         }),
     };
     TOKEN_INFO.save(deps.storage, &data)?;
@@ -59,16 +56,35 @@ pub fn execute(
             name,
             amount,
             price,
-        } => Ok(add_beverage(deps, env, info, name, amount, price)?),
-        ExecuteMsg::SetPrice { name, price } => Ok(set_price(deps, env, info, name, price)?),
-        ExecuteMsg::FillUpBeverage { name, amount } => {
-            Ok(fill_up_beverage(deps, env, info, name, amount)?)
+        } => Ok(add_beverage(
+            deps,
+            env,
+            info,
+            name,
+            Uint128::from(amount),
+            Uint128::from(price),
+        )?),
+        ExecuteMsg::SetPrice { name, price } => {
+            Ok(set_price(deps, env, info, name, Uint128::from(price))?)
         }
+        ExecuteMsg::FillUpBeverage { name, amount } => Ok(fill_up_beverage(
+            deps,
+            env,
+            info,
+            name,
+            Uint128::from(amount),
+        )?),
         ExecuteMsg::BuyBeverage { name } => Ok(buy_beverage(deps, env, info, name)?),
-        ExecuteMsg::Withdraw { coin_amount } => Ok(withdraw(deps, env, info, coin_amount)?),
-        ExecuteMsg::AddCoins { address, coins } => {
-            Ok(add_coins(deps, env, info, address, coins)?)
+        ExecuteMsg::Withdraw { coin_amount } => {
+            Ok(withdraw(deps, env, info, Uint128::from(coin_amount))?)
         }
+        ExecuteMsg::GiveTokens { address, tokens } => Ok(give_tokens(
+            deps,
+            env,
+            info,
+            address,
+            Uint128::from(tokens),
+        )?),
     }
 }
 
@@ -205,6 +221,12 @@ pub fn buy_beverage(
         return Err(ContractError::BevaregeIsOver {});
     }
 
+    let balance = BALANCES.load(deps.storage, &info.sender)?;
+
+    if beverage.price > balance {
+        return Err(ContractError::NotEnoughTokens {});
+    }
+
     BALANCES.update(
         deps.storage,
         &info.sender,
@@ -231,6 +253,9 @@ pub fn buy_beverage(
     Ok(res)
 }
 
+///
+/// Withdraw supplied tokens
+///
 pub fn withdraw(
     deps: DepsMut,
     _env: Env,
@@ -251,12 +276,15 @@ pub fn withdraw(
     Ok(res)
 }
 
-pub fn add_coins(
+///
+/// Gives tokens to the user
+///
+pub fn give_tokens(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
     address: String,
-    coins: Uint128,
+    add_tokens: Uint128,
 ) -> Result<Response, ContractError> {
     let mut config = TOKEN_INFO.load(deps.storage)?;
     if config.mint.is_none() || config.mint.as_ref().unwrap().minter != info.sender {
@@ -264,7 +292,7 @@ pub fn add_coins(
     }
 
     // update supply and enforce cap
-    config.total_supply += coins;
+    config.total_supply += add_tokens;
     if let Some(limit) = config.get_cap() {
         if config.total_supply > limit {
             return Err(ContractError::CannotExceedCap {});
@@ -274,15 +302,15 @@ pub fn add_coins(
 
     let address = deps.api.addr_validate(&address)?;
 
-    BALANCES.update(deps.storage, &address, |balance| -> StdResult<_> {
+    let balance = BALANCES.update(deps.storage, &address, |balance| -> StdResult<_> {
         let balance = balance.unwrap_or_default();
-        balance.checked_add(coins)?;
+        balance.checked_add(add_tokens)?;
         Ok(balance)
     })?;
 
     let res = Response::new()
         .add_attribute("USER_ADDRESS", address)
-        .add_attribute("BALANCE", coins);
+        .add_attribute("BALANCE", balance);
     Ok(res)
 }
 
@@ -307,12 +335,12 @@ pub fn query_beverage_list(
     let offset = offset.map(Bound::exclusive);
 
     let beverages = VENDING_MACHINE
-        .range_de(deps.storage, offset, None, Order::Ascending)
+        .range(deps.storage, offset, None, Order::Ascending)
         .take(limit)
         .map(|item| {
             let item = item.unwrap_or_default();
             AllBeveragesDetails {
-                name: item.0,
+                name: std::str::from_utf8(&item.0).unwrap().to_string(),
                 price: item.1.price,
                 amount: item.1.amount,
             }

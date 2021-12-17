@@ -29,4 +29,7 @@ pub enum ContractError {
 
     #[error("The beverage is over")]
     BevaregeIsOver {},
+
+    #[error("Not enough COFFEETOKES")]
+    NotEnoughTokens {},
 }

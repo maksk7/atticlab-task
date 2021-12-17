@@ -1,1 +1,1 @@
-f03d9373cf3d122c1ded8290353bc0a985bdcaecfb8d6501889d261e868678b5  ./target/wasm32-unknown-unknown/release/terra_test.wasm
+58fa9a5368988cfae098674f4c5d44b81f8d3afd311beeb4983596a6db7abf16  ./target/wasm32-unknown-unknown/release/terra_test.wasm

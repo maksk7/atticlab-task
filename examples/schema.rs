@@ -3,8 +3,10 @@ use std::fs::create_dir_all;
 
 use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
 
+use terra_test::msg::{
+    AllBeveragesDetails, AllBeveragesResponse, ExecuteMsg, InstantiateMsg, QueryMsg,
+};
 use terra_test::state::BeverageInfo;
-use terra_test::msg::{InstantiateMsg, QueryMsg, ExecuteMsg, AllBeveragesDetails, AllBeveragesResponse};
 
 fn main() {
     let mut out_dir = current_dir().unwrap();

@@ -32,9 +32,9 @@ pub enum ExecuteMsg {
     Withdraw {
         coin_amount: Uint128,
     },
-    AddCoins {
+    GiveTokens {
         address: String,
-        coins: Uint128,
+        tokens: Uint128,
     },
 }
 
@@ -44,7 +44,7 @@ pub enum QueryMsg {
     BeverageList {
         offset: Option<String>,
         limit: Option<u32>,
-    }
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
