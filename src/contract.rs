@@ -5,6 +5,13 @@ use cosmwasm_std::{
 };
 
 use cw2::set_contract_version;
+use cw20_base::contract::{
+    execute_burn, execute_send, execute_transfer, query_balance, query_token_info,
+};
+use cw20_base::allowances::{
+    execute_burn_from, execute_decrease_allowance, execute_increase_allowance, execute_send_from,
+    execute_transfer_from, query_allowance,
+};
 use cw20_base::state::{MinterData, TokenInfo, BALANCES, TOKEN_INFO};
 use cw_storage_plus::Bound;
 
@@ -84,6 +91,49 @@ pub fn execute(
             info,
             address,
             Uint128::from(tokens),
+        )?),
+
+        // these all come from cw20-base to implement the cw20 standard
+        ExecuteMsg::Transfer { recipient, amount } => {
+            Ok(execute_transfer(deps, env, info, recipient, amount)?)
+        }
+        ExecuteMsg::Burn { amount } => Ok(execute_burn(deps, env, info, amount)?),
+        ExecuteMsg::Send {
+            contract,
+            amount,
+            msg,
+        } => Ok(execute_send(deps, env, info, contract, amount, msg)?),
+        ExecuteMsg::IncreaseAllowance {
+            spender,
+            amount,
+            expires,
+        } => Ok(execute_increase_allowance(
+            deps, env, info, spender, amount, expires,
+        )?),
+        ExecuteMsg::DecreaseAllowance {
+            spender,
+            amount,
+            expires,
+        } => Ok(execute_decrease_allowance(
+            deps, env, info, spender, amount, expires,
+        )?),
+        ExecuteMsg::TransferFrom {
+            owner,
+            recipient,
+            amount,
+        } => Ok(execute_transfer_from(
+            deps, env, info, owner, recipient, amount,
+        )?),
+        ExecuteMsg::BurnFrom { owner, amount } => {
+            Ok(execute_burn_from(deps, env, info, owner, amount)?)
+        }
+        ExecuteMsg::SendFrom {
+            owner,
+            contract,
+            amount,
+            msg,
+        } => Ok(execute_send_from(
+            deps, env, info, owner, contract, amount, msg,
         )?),
     }
 }
@@ -319,6 +369,11 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::BeverageList { offset, limit } => {
             to_binary(&query_beverage_list(deps, offset, limit)?)
+        },
+        QueryMsg::TokenInfo {} => to_binary(&query_token_info(deps)?),
+        QueryMsg::Balance { address } => to_binary(&query_balance(deps, address)?),
+        QueryMsg::Allowance { owner, spender } => {
+            to_binary(&query_allowance(deps, owner, spender)?)
         }
     }
 }
