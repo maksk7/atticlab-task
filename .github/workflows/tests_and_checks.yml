@@ -16,9 +16,8 @@ jobs:
         uses:                   actions/checkout@v2
       - name:                   Generate code coverage
         run: |
-          apt-get install -y python3
+          apt install build-essential
           cargo tarpaulin --verbose --all-features --workspace --timeout 120 --out Xml
-          python -v
       - name:                   Upload to codecov.io
         uses:                   codecov/codecov-action@v2
         with:
